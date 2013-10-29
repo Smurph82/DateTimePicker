@@ -16,13 +16,17 @@
 
 package com.android.datetimepicker.time;
 
+import java.text.DateFormatSymbols;
+import java.util.ArrayList;
+import java.util.Locale;
+
 import android.animation.ObjectAnimator;
 import android.app.ActionBar.LayoutParams;
 import android.app.DialogFragment;
-import android.content.Context;
 import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -38,10 +42,6 @@ import com.android.datetimepicker.R;
 import com.android.datetimepicker.Utils;
 import com.android.datetimepicker.time.RadialPickerLayout.OnValueSelectedListener;
 
-import java.text.DateFormatSymbols;
-import java.util.ArrayList;
-import java.util.Locale;
-
 /**
  * Dialog to set a time.
  */
@@ -54,6 +54,8 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
     private static final String KEY_CURRENT_ITEM_SHOWING = "current_item_showing";
     private static final String KEY_IN_KB_MODE = "in_kb_mode";
     private static final String KEY_TYPED_TIMES = "typed_times";
+    private static final String KEY_IS_CUSTOM_MINUTES = "is_custom_minutes";
+    private static final String KEY_CUSTOM_MINUTES = "custom_minutes";
 
     public static final int HOUR_INDEX = 0;
     public static final int MINUTE_INDEX = 1;
@@ -63,6 +65,19 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
     public static final int ENABLE_PICKER_INDEX = 3;
     public static final int AM = 0;
     public static final int PM = 1;
+    
+    // Custom minute arrays
+    public static final int CUSTOM_MIN_ARRAY_10 = 0;
+    public static final int CUSTOM_MIN_ARRAY_15 = 1;
+    public static final int CUSTOM_MIN_ARRAY_20 = 2;
+    
+    private final SparseArray<int[]> mCustomArrays; 
+    {
+    	mCustomArrays = new SparseArray<int[]>(3);
+    	mCustomArrays.put(CUSTOM_MIN_ARRAY_10, new int[] { 0, 10, 20, 30, 40, 50 });
+    	mCustomArrays.put(CUSTOM_MIN_ARRAY_15, new int[] { 0, 15, 30, 45 });
+    	mCustomArrays.put(CUSTOM_MIN_ARRAY_20, new int[] { 0, 20, 40 });
+    }
 
     // Delay before starting the pulse animation, in ms.
     private static final int PULSE_ANIMATOR_DELAY = 300;
@@ -87,6 +102,8 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
     private int mInitialHourOfDay;
     private int mInitialMinute;
     private boolean mIs24HourMode;
+    private boolean mIsCustomMinutes;
+    private int[] mCustomMinutes;
 
     // For hardware IME input.
     private char mPlaceholderText;
@@ -122,26 +139,33 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
         // Empty constructor required for dialog fragment.
     }
 
-    public TimePickerDialog(Context context, int theme, OnTimeSetListener callback,
-            int hourOfDay, int minute, boolean is24HourMode) {
-        // Empty constructor required for dialog fragment.
-    }
+//    public TimePickerDialog(Context context, int theme, OnTimeSetListener callback,
+//            int hourOfDay, int minute, boolean is24HourMode) {
+//        // Empty constructor required for dialog fragment.
+//    }
 
     public static TimePickerDialog newInstance(OnTimeSetListener callback,
             int hourOfDay, int minute, boolean is24HourMode) {
-        TimePickerDialog ret = new TimePickerDialog();
-        ret.initialize(callback, hourOfDay, minute, is24HourMode);
+        return newInstance(callback, hourOfDay, minute, is24HourMode, -1);
+    }
+    
+    public static TimePickerDialog newInstance(OnTimeSetListener callback,
+            int hourOfDay, int minute, boolean is24HourMode, int customMinArrayIndex) {
+    	TimePickerDialog ret = new TimePickerDialog();
+        ret.initialize(callback, hourOfDay, minute, is24HourMode, customMinArrayIndex);
         return ret;
     }
 
     public void initialize(OnTimeSetListener callback,
-            int hourOfDay, int minute, boolean is24HourMode) {
+            int hourOfDay, int minute, boolean is24HourMode, int customMinArrayIndex) {
         mCallback = callback;
 
         mInitialHourOfDay = hourOfDay;
         mInitialMinute = minute;
         mIs24HourMode = is24HourMode;
         mInKbMode = false;
+        mCustomMinutes = mCustomArrays.get(customMinArrayIndex);
+        mIsCustomMinutes = (mCustomMinutes !=null && mCustomMinutes.length>0);
     }
 
     public void setOnTimeSetListener(OnTimeSetListener callback) {
@@ -164,6 +188,8 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
             mInitialMinute = savedInstanceState.getInt(KEY_MINUTE);
             mIs24HourMode = savedInstanceState.getBoolean(KEY_IS_24_HOUR_VIEW);
             mInKbMode = savedInstanceState.getBoolean(KEY_IN_KB_MODE);
+            mCustomMinutes = savedInstanceState.getIntArray(KEY_CUSTOM_MINUTES);
+            mIsCustomMinutes = savedInstanceState.getBoolean(KEY_IS_CUSTOM_MINUTES);
         }
     }
 
@@ -199,7 +225,7 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
         mTimePicker = (RadialPickerLayout) view.findViewById(R.id.time_picker);
         mTimePicker.setOnValueSelectedListener(this);
         mTimePicker.setOnKeyListener(keyboardListener);
-        mTimePicker.initialize(getActivity(), mInitialHourOfDay, mInitialMinute, mIs24HourMode);
+        mTimePicker.initialize(getActivity(), mInitialHourOfDay, mInitialMinute, mIs24HourMode, mIsCustomMinutes, mCustomMinutes);
         int currentItemShowing = HOUR_INDEX;
         if (savedInstanceState != null &&
                 savedInstanceState.containsKey(KEY_CURRENT_ITEM_SHOWING)) {
@@ -313,6 +339,8 @@ public class TimePickerDialog extends DialogFragment implements OnValueSelectedL
             outState.putBoolean(KEY_IS_24_HOUR_VIEW, mIs24HourMode);
             outState.putInt(KEY_CURRENT_ITEM_SHOWING, mTimePicker.getCurrentItemShowing());
             outState.putBoolean(KEY_IN_KB_MODE, mInKbMode);
+            outState.putIntArray(KEY_CUSTOM_MINUTES, mCustomMinutes);
+            outState.putBoolean(KEY_IS_CUSTOM_MINUTES, mIsCustomMinutes);
             if (mInKbMode) {
                 outState.putIntegerArrayList(KEY_TYPED_TIMES, mTypedTimes);
             }

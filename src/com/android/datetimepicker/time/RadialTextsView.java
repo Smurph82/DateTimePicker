@@ -42,7 +42,7 @@ public class RadialTextsView extends View {
 
     private boolean mDrawValuesReady;
     private boolean mIsInitialized;
-    private boolean mIsMinutes;
+    private boolean mIsCustomMinutes;
 
     private Typeface mTypefaceLight;
     private Typeface mTypefaceRegular;
@@ -81,7 +81,7 @@ public class RadialTextsView extends View {
     }
 
     public void initialize(Resources res, String[] texts, String[] innerTexts,
-            boolean is24HourMode, boolean disappearsOut, boolean isMinutes) {
+            boolean is24HourMode, boolean disappearsOut, boolean isCustomMinutes) {
         if (mIsInitialized) {
             Log.e(TAG, "This RadialTextsView may only be initialized once.");
             return;
@@ -97,7 +97,7 @@ public class RadialTextsView extends View {
         mPaint.setAntiAlias(true);
         mPaint.setTextAlign(Align.CENTER);
 
-        mIsMinutes = isMinutes;
+        mIsCustomMinutes = isCustomMinutes;
         mTexts = texts;
         mInnerTexts = innerTexts;
         mIs24HourMode = is24HourMode;
@@ -211,7 +211,7 @@ public class RadialTextsView extends View {
         }
 
         // Draw the texts in the pre-calculated positions.
-        drawTexts(canvas, mTextSize, mTypefaceLight, mTexts, mTextGridWidths, mTextGridHeights, mIsMinutes);
+        drawTexts(canvas, mTextSize, mTypefaceLight, mTexts, mTextGridWidths, mTextGridHeights, mIsCustomMinutes);
         if (mHasInnerCircle) {
             drawTexts(canvas, mInnerTextSize, mTypefaceRegular, mInnerTexts,
                     mInnerTextGridWidths, mInnerTextGridHeights, false);
@@ -276,10 +276,10 @@ public class RadialTextsView extends View {
      * Draw the 12 text values at the positions specified by the textGrid parameters.
      */
     private void drawTexts(Canvas canvas, float textSize, Typeface typeface, String[] texts,
-            float[] textGridWidths, float[] textGridHeights, boolean isMinutes) {
+            float[] textGridWidths, float[] textGridHeights, boolean isCustomMinutes) {
         mPaint.setTextSize(textSize);
         mPaint.setTypeface(typeface);
-        if (!isMinutes) {
+        if (!isCustomMinutes) {
 	        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
 	        canvas.drawText(texts[1], textGridWidths[4], textGridHeights[1], mPaint);
 	        canvas.drawText(texts[2], textGridWidths[5], textGridHeights[2], mPaint);
@@ -293,7 +293,31 @@ public class RadialTextsView extends View {
 	        canvas.drawText(texts[10], textGridWidths[1], textGridHeights[2], mPaint);
 	        canvas.drawText(texts[11], textGridWidths[2], textGridHeights[1], mPaint);
         } else {
-	        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
+        	int length = texts.length;
+        	switch (length) {
+			case 3: // Only 0, 20, 40 minutes shown
+		        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
+		        canvas.drawText(texts[1], textGridWidths[5], textGridHeights[4], mPaint);
+		        canvas.drawText(texts[2], textGridWidths[1], textGridHeights[4], mPaint);				
+				break;
+			case 4: // Only 0, 15, 30, 45 minutes shown
+		        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
+		        canvas.drawText(texts[1], textGridWidths[6], textGridHeights[3], mPaint);
+		        canvas.drawText(texts[2], textGridWidths[3], textGridHeights[6], mPaint);
+		        canvas.drawText(texts[3], textGridWidths[0], textGridHeights[3], mPaint);
+				break;
+			case 6: // Only 0, 10, 20, 30, 40, 50 minutes shown
+		        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
+		        canvas.drawText(texts[1], textGridWidths[5], textGridHeights[2], mPaint);
+		        canvas.drawText(texts[2], textGridWidths[5], textGridHeights[4], mPaint);
+		        canvas.drawText(texts[3], textGridWidths[3], textGridHeights[6], mPaint);
+		        canvas.drawText(texts[4], textGridWidths[1], textGridHeights[4], mPaint);
+		        canvas.drawText(texts[5], textGridWidths[1], textGridHeights[2], mPaint);
+				break;
+
+			default:
+				break;
+			}
         }
     }
 

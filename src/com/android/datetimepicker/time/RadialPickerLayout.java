@@ -42,8 +42,6 @@ import android.widget.FrameLayout;
 
 import com.android.datetimepicker.R;
 
-import java.util.HashMap;
-
 public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
     private static final String TAG = "RadialPickerLayout";
 
@@ -53,6 +51,9 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
     private static final int VISIBLE_DEGREES_STEP_SIZE = 30;
     private static final int HOUR_VALUE_TO_DEGREES_STEP_SIZE = VISIBLE_DEGREES_STEP_SIZE;
     private static final int MINUTE_VALUE_TO_DEGREES_STEP_SIZE = 6;
+    private static final int SIXTHS_VALUE_TO_DEGREES_STEP_SIZE = 60;
+    private static final int QUARTER_VALUE_TO_DEGREES_STEP_SIZE = 90;
+    private static final int THIRD_VALUE_TO_DEGREES_STEP_SIZE = 120;
     private static final int HOUR_INDEX = TimePickerDialog.HOUR_INDEX;
     private static final int MINUTE_INDEX = TimePickerDialog.MINUTE_INDEX;
     private static final int AMPM_INDEX = TimePickerDialog.AMPM_INDEX;
@@ -71,6 +72,8 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
     private boolean mIs24HourMode;
     private boolean mHideAmPm;
     private int mCurrentItemShowing;
+    private boolean mIsCustomMinutes;
+    private int mCustomMinuteAmount;
 
     private CircleView mCircleView;
     private AmPmCirclesView mAmPmCirclesView;
@@ -169,10 +172,14 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
      * @param is24HourMode
      */
     public void initialize(Context context, int initialHoursOfDay, int initialMinutes,
-            boolean is24HourMode) {
+            boolean is24HourMode, boolean isCustomMinutes, int[] customMinutes) {
         if (mTimeInitialized) {
             Log.e(TAG, "Time has already been initialized.");
             return;
+        }
+        mIsCustomMinutes = isCustomMinutes;
+        if (customMinutes!=null) {
+        	mCustomMinuteAmount = customMinutes.length; 
         }
         mIs24HourMode = is24HourMode;
         mHideAmPm = mAccessibilityManager.isTouchExplorationEnabled()? true : mIs24HourMode;
@@ -189,20 +196,23 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
         Resources res = context.getResources();
         int[] hours = {12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
         int[] hours_24 = {0, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
-        int[] minutes = {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55};
+        int[] minutes = (!isCustomMinutes ? new int[] {0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55} : customMinutes);
         String[] hoursTexts = new String[12];
         String[] innerHoursTexts = new String[12];
-        String[] minutesTexts = new String[12];
+        int minLength = minutes.length;
+        String[] minutesTexts = new String[minLength];
         for (int i = 0; i < 12; i++) {
             hoursTexts[i] = is24HourMode?
                     String.format("%02d", hours_24[i]) : String.format("%d", hours[i]);
             innerHoursTexts[i] = String.format("%d", hours[i]);
-            minutesTexts[i] = String.format("%02d", minutes[i]);
+            if (i < minLength) {            	
+            	minutesTexts[i] = String.format("%02d", minutes[i]);
+            }
         }
         mHourRadialTextsView.initialize(res,
                 hoursTexts, (is24HourMode? innerHoursTexts : null), mHideAmPm, true, false);
         mHourRadialTextsView.invalidate();
-        mMinuteRadialTextsView.initialize(res, minutesTexts, null, mHideAmPm, false, true);
+        mMinuteRadialTextsView.initialize(res, minutesTexts, null, mHideAmPm, false, isCustomMinutes);
         mMinuteRadialTextsView.invalidate();
 
         // Initialize the currently-selected hour and minute.
@@ -409,6 +419,96 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
     }
 
     /**
+     * Returns mapping of any input degrees (0 to 360) to one of 3 visible output degrees (all
+     * multiples of 20), where the input will be "snapped" to the closest visible degrees.
+     * @param degrees The input degrees
+     * @param forceAboveOrBelow The output may be forced to either the higher or lower step, or may
+     * be allowed to snap to whichever is closer. Use 1 to force strictly higher, -1 to force
+     * strictly lower, and 0 to snap to the closer one.
+     * @return output degrees, will be a multiple of 20
+     */
+    private int snapOnly120s(int degrees, int forceHigherOrLower) {
+        int stepSize = THIRD_VALUE_TO_DEGREES_STEP_SIZE;
+        int floor = (degrees / stepSize) * stepSize;
+        int ceiling = floor + stepSize;
+        if (forceHigherOrLower == 1) {
+            degrees = ceiling;
+        } else if (forceHigherOrLower == -1) {
+            if (degrees == floor) {
+                floor -= stepSize;
+            }
+            degrees = floor;
+        } else {
+            if ((degrees - floor) < (ceiling - degrees)) {
+                degrees = floor;
+            } else {
+                degrees = ceiling;
+            }
+        }
+        return degrees;
+    }
+
+    /**
+     * Returns mapping of any input degrees (0 to 360) to one of 6 visible output degrees (all
+     * multiples of 10), where the input will be "snapped" to the closest visible degrees.
+     * @param degrees The input degrees
+     * @param forceAboveOrBelow The output may be forced to either the higher or lower step, or may
+     * be allowed to snap to whichever is closer. Use 1 to force strictly higher, -1 to force
+     * strictly lower, and 0 to snap to the closer one.
+     * @return output degrees, will be a multiple of 10
+     */
+    private int snapOnly60s(int degrees, int forceHigherOrLower) {
+        int stepSize = SIXTHS_VALUE_TO_DEGREES_STEP_SIZE;
+        int floor = (degrees / stepSize) * stepSize;
+        int ceiling = floor + stepSize;
+        if (forceHigherOrLower == 1) {
+            degrees = ceiling;
+        } else if (forceHigherOrLower == -1) {
+            if (degrees == floor) {
+                floor -= stepSize;
+            }
+            degrees = floor;
+        } else {
+            if ((degrees - floor) < (ceiling - degrees)) {
+                degrees = floor;
+            } else {
+                degrees = ceiling;
+            }
+        }
+        return degrees;
+    }
+    
+    /**
+     * Returns mapping of any input degrees (0 to 360) to one of 4 visible output degrees (all
+     * multiples of 15), where the input will be "snapped" to the closest visible degrees.
+     * @param degrees The input degrees
+     * @param forceAboveOrBelow The output may be forced to either the higher or lower step, or may
+     * be allowed to snap to whichever is closer. Use 1 to force strictly higher, -1 to force
+     * strictly lower, and 0 to snap to the closer one.
+     * @return output degrees, will be a multiple of 15
+     */
+    private int snapOnly90s(int degrees, int forceHigherOrLower) {
+    	int stepSize = QUARTER_VALUE_TO_DEGREES_STEP_SIZE;
+        int floor = (degrees / stepSize) * stepSize;
+        int ceiling = floor + stepSize;
+        if (forceHigherOrLower == 1) {
+            degrees = ceiling;
+        } else if (forceHigherOrLower == -1) {
+            if (degrees == floor) {
+                floor -= stepSize;
+            }
+            degrees = floor;
+        } else {
+            if ((degrees - floor) < (ceiling - degrees)) {
+                degrees = floor;
+            } else {
+                degrees = ceiling;
+            }
+        }
+        return degrees;
+    }
+
+    /**
      * For the currently showing view (either hours or minutes), re-calculate the position for the
      * selector, and redraw it at that position. The input degrees will be snapped to a selectable
      * value.
@@ -430,10 +530,27 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
 
         int stepSize;
         boolean allowFineGrained = !forceToVisibleValue && (currentShowing == MINUTE_INDEX);
-        if (allowFineGrained) {
-            degrees = snapPrefer30s(degrees);
+        if (mIsCustomMinutes && (currentShowing == MINUTE_INDEX)) {
+        	switch (mCustomMinuteAmount) {
+			case 3: // Every 20 minutes
+	        	degrees = snapOnly120s(degrees, 0);
+				break;
+			case 4: // Every 15 minutes
+	        	degrees = snapOnly90s(degrees, 0);
+				break;
+			case 6: // Every 10 minutes
+	        	degrees = snapOnly60s(degrees, 0);
+				break;
+
+			default:
+				break;
+			}
         } else {
-            degrees = snapOnly30s(degrees, 0);
+	        if (allowFineGrained) {
+	            degrees = snapPrefer30s(degrees);
+	        } else {
+	            degrees = snapOnly30s(degrees, 0);
+	        }
         }
 
         RadialSelectorView radialSelectorView;
