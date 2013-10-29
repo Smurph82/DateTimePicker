@@ -292,6 +292,8 @@ public class RadialTextsView extends View {
 	        canvas.drawText(texts[9], textGridWidths[0], textGridHeights[3], mPaint);
 	        canvas.drawText(texts[10], textGridWidths[1], textGridHeights[2], mPaint);
 	        canvas.drawText(texts[11], textGridWidths[2], textGridHeights[1], mPaint);
+        } else {
+	        canvas.drawText(texts[0], textGridWidths[3], textGridHeights[0], mPaint);
         }
     }
 
