@@ -16,6 +16,9 @@
 
 package com.android.datetimepicker.date;
 
+import java.util.Calendar;
+import java.util.HashMap;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.util.Log;
@@ -25,10 +28,6 @@ import android.widget.AbsListView.LayoutParams;
 import android.widget.BaseAdapter;
 
 import com.android.datetimepicker.date.SimpleMonthView.OnDayClickListener;
-import com.android.datetimepicker.R;
-
-import java.util.Calendar;
-import java.util.HashMap;
 
 /**
  * An adapter for a list of {@link SimpleMonthView} items.
@@ -44,6 +43,9 @@ public class SimpleMonthAdapter extends BaseAdapter implements OnDayClickListene
 
     protected static int WEEK_7_OVERHANG_HEIGHT = 7;
     protected static final int MONTHS_IN_YEAR = 12;
+    
+    /** Used for turning the {@link Log} on or off*/
+    private final boolean D = false;
 
     /**
      * A convenience class to represent a specific date.
@@ -165,7 +167,7 @@ public class SimpleMonthAdapter extends BaseAdapter implements OnDayClickListene
 
         final int month = position % MONTHS_IN_YEAR;
         final int year = position / MONTHS_IN_YEAR + mController.getMinYear();
-        Log.d(TAG, "Year: " + year + ", Month: " + month);
+        if (D) Log.d(TAG, "Year: " + year + ", Month: " + month);
 
         int selectedDay = -1;
         if (isSelectedDayInMonth(year, month)) {
